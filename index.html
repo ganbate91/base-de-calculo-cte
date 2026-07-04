@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extrator e Somador Pro</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-hover: #1557b0;
+            --success: #16a34a;
+            --success-bg: #f0fdf4;
+            --success-border: #bbf7d0;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: var(--bg-card);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-top: 0;
+            font-size: 1.6rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        p.sub-item {
+            margin-bottom: 20px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-processar {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-pdf {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        #area-resultados {
+            margin-top: 32px;
+            border-top: 2px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        .topo-controles {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8fafc;
+            padding: 20px 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .info-bloco h3 {
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+            font-size: 1.2rem;
+        }
+
+        .info-bloco p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .acoes-bloco {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .soma-destaque {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--success);
+            background-color: var(--success-bg);
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--success-border);
+            white-space: nowrap;
+        }
+
+        .tabela-container {
+            max-height: 450px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .loading-text {
+            display: none;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-style: italic;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Processador de Dados</h2>
+        <p class="sub-item">Cole os registros abaixo. A deduplicação será feita pelo Nº CTE.</p>
+
+        <textarea id="dadosEntrada" placeholder="Cole os dados aqui..."></textarea>
+
+        <div>
+            <button class="btn-processar" onclick="processarDados()">📊 Processar</button>
+            <div id="loadingText" class="loading-text">Processando registros, por favor aguarde...</div>
+        </div>
+
+        <div id="area-resultados" style="display: none;">
+            <div class="topo-controles">
+                <div class="info-bloco">
+                    <h3>Base Consolidada</h3>
+                    <p id="info-contagem"></p>
+                </div>
+
+                <div class="acoes-bloco">
+                    <div class="soma-destaque" id="somaTotal">Total: R$ 0,00</div>
+                    <button class="btn-pdf" onclick="baixarPDF()">📄 Baixar PDF</button>
+                </div>
+            </div>
+
+            <h4 style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.95rem;">Itens únicos processados:</h4>
+            <div class="tabela-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th style="width: 220px; text-align: right;">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-corpo"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pdfDataMatrix = [];
+        let globalSumString = "R$ 0,00";
+
+        function normalizarLinha(linha) {
+            return linha
+                .replace(/\u00a0/g, ' ')
+                .replace(/\r/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function extrairNumeroCTE(texto) {
+            const match = texto.match(/Nº\s*CTE:\s*(\d+)/i);
+            return match ? match[1] : null;
+        }
+
+        function extrairValorCarga(texto) {
+            const match = texto.match(/Valor da Carga:\s*R\$\s*([0-9.]+,[0-9]{2})/i);
+            if (!match) return null;
+            const numero = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+            return Number.isNaN(numero) ? null : numero;
+        }
+
+        function processarDados() {
+            const loading = document.getElementById('loadingText');
+            const areaResultados = document.getElementById('area-resultados');
+            const textoColado = document.getElementById('dadosEntrada').value;
+
+            if (!textoColado.trim()) {
+                alert("Por favor, cole os dados na caixa de entrada.");
+                return;
+            }
+
+            loading.style.display = 'block';
+            areaResultados.style.display = 'none';
+
+            setTimeout(() => {
+                try {
+                    const linhas = textoColado.split(/\r?\n/).map(normalizarLinha).filter(Boolean);
+
+                    const vistos = new Set();
+                    const registros = [];
+
+                    for (const linha of linhas) {
+                        const cte = extrairNumeroCTE(linha);
+                        if (!cte) continue;
+
+                        if (!vistos.has(cte)) {
+                            vistos.add(cte);
+                            registros.push({
+                                cte,
+                                texto: linha,
+                                valor: extrairValorCarga(linha)
+                            });
+                        }
+                    }
+
+                    let soma = 0;
+                    let html = "";
+                    pdfDataMatrix = [];
+
+                    for (const reg of registros) {
+                        let valorHtml = "<span style='color:#94a3b8;font-style:italic;'>Não encontrado</span>";
+                        let valorPdf = "R$ 0,00";
+
+                        if (reg.valor !== null) {
+                            soma += reg.valor;
+                            valorPdf = reg.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                            valorHtml = `<strong style="color:#16a34a;">${valorPdf}</strong>`;
+                        }
+
+                        html += `<tr><td>${escapeHtml(reg.texto)}</td><td style="text-align:right;">${valorHtml}</td></tr>`;
+                        pdfDataMatrix.push([reg.texto, valorPdf]);
+                    }
+
+                    globalSumString = soma.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    document.getElementById('somaTotal').innerText = `Total: ${globalSumString}`;
+                    document.getElementById('info-contagem').innerText = `Registros lidos: ${linhas.length} | Itens únicos por Nº CTE: ${registros.length}`;
+                    document.getElementById('tabela-corpo').innerHTML = html || '<tr><td colspan="2">Nenhum registro válido encontrado.</td></tr>';
+                    areaResultados.style.display = 'block';
+                } catch (error) {
+                    console.error(error);
+                    alert("Erro ao processar os dados: " + error.message);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            }, 10);
+        }
+
+        function baixarPDF() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert("A biblioteca jsPDF não foi carregada corretamente.");
+                return;
+            }
+
+            if (pdfDataMatrix.length === 0) {
+                alert("Nenhum dado processado para exportação.");
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(18);
+                doc.setTextColor(26, 115, 232);
+                doc.text("Relatório Consolidador de Base de Cálculo", 14, 20);
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 27);
+                doc.text(document.getElementById('info-contagem').innerText, 14, 32);
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.setTextColor(22, 163, 74);
+                doc.text(`Soma Consolidada: ${globalSumString}`, 14, 42);
+
+                doc.autoTable({
+                    startY: 48,
+                    head: [['Item', 'Valor (R$)']],
+                    body: pdfDataMatrix,
+                    theme: 'striped',
+                    headStyles: { fillColor: [26, 115, 232], fontStyle: 'bold', fontSize: 10 },
+                    styles: { font: 'helvetica', fontSize: 9, cellPadding: 3 },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' },
+                        1: { cellWidth: 45, halign: 'right' }
+                    },
+                    margin: { top: 15, bottom: 15, left: 14, right: 14 },
+                    didDrawPage: function (data) {
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8);
+                        doc.setTextColor(150);
+                        doc.text("Página " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.height - 10);
+                    }
+                });
+
+                doc.save('relatorio_base_calculo.pdf');
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao gerar PDF: " + error.message);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
